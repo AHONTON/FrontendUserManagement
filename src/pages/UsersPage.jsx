@@ -25,12 +25,12 @@ export default function Dashboard() {
   const fetchUsers = async () => {
     const loadingAlert = SwalHelper.loading("Chargement des utilisateurs...");
     try {
-      const response = await fetch(`${API_URL}/users`);
+      const response = await fetch(`${API_URL}/user`);
       if (!response.ok) {
         throw new Error("Erreur lors du chargement des utilisateurs");
       }
       const data = await response.json();
-      setUsers(data);
+      setUsers(Array.isArray(data) ? data : data.users || []);
       SwalHelper.success("Utilisateurs chargés avec succès");
     } catch (error) {
       SwalHelper.error("Erreur", error.message);
@@ -46,7 +46,7 @@ export default function Dashboard() {
   const handleAddUser = async (userData) => {
     const loadingAlert = SwalHelper.loading("Ajout de l'utilisateur...");
     try {
-      const response = await fetch(`${API_URL}/users`, {
+      const response = await fetch(`${API_URL}/user`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -69,7 +69,7 @@ export default function Dashboard() {
   const handleEditUser = async (userData) => {
     const loadingAlert = SwalHelper.loading("Mise à jour de l'utilisateur...");
     try {
-      const response = await fetch(`${API_URL}/users/${editingUser.id}`, {
+      const response = await fetch(`${API_URL}/user/${editingUser.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -101,7 +101,7 @@ export default function Dashboard() {
         "Suppression de l'utilisateur..."
       );
       try {
-        const response = await fetch(`${API_URL}/users/${userId}`, {
+        const response = await fetch(`${API_URL}/user/${userId}`, {
           method: "DELETE",
         });
         if (!response.ok) {
@@ -125,7 +125,7 @@ export default function Dashboard() {
   const handleViewDetails = async (user) => {
     const loadingAlert = SwalHelper.loading("Chargement des détails...");
     try {
-      const response = await fetch(`${API_URL}/users/${user.id}`);
+      const response = await fetch(`${API_URL}/user/${user.id}`);
       if (!response.ok) {
         throw new Error("Erreur lors du chargement des détails");
       }

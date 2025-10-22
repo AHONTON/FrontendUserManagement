@@ -6,12 +6,16 @@ import DashboardPage from "./pages/DashboardPage";
 import UsersPage from "./pages/UsersPage";
 import ProfilePage from "./pages/ProfilePage";
 import SupportPage from "./pages/SupportPage";
+import RegisterPage from "./pages/register";
 
 function App() {
   return (
     <ThemeProvider>
       <Router>
         <Routes>
+          {/* Page d'inscription (hors layout principal) */}
+          <Route path="/register" element={<RegisterPage />} />
+
           {/* Redirection par défaut vers le dashboard */}
           <Route path="/" element={<Navigate to="/dashboard" />} />
           

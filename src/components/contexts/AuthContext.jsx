@@ -18,7 +18,7 @@ export const AuthProvider = ({ children }) => {
           console.log("🔍 Token trouvé, vérification de l'authentification...");
           // Optionnel : vérifier la validité du token avec l'API
           const response = await axios.get(
-            "http://127.0.0.1:8000/api/admin/me",
+            "http://127.0.0.1:8000/api/admin/register",
             {
               headers: {
                 Authorization: `Bearer ${token}`,
