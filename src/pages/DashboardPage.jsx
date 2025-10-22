@@ -5,7 +5,7 @@ import Modal from "../components/UI/Modal";
 import SwalHelper from "./../utils/SwalHelper";
 
 // Définir l'URL de base de l'API avec Vite
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 const cardVariants = {
   hidden: { opacity: 0, y: 20 },

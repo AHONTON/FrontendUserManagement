@@ -6,9 +6,10 @@ import { User, Mail, Lock, Check, Image as ImageIcon, X } from "lucide-react";
 const API_BASE =
   (import.meta?.env?.VITE_API_URL && String(import.meta.env.VITE_API_URL)) ||
   "/api";
-const API_URL = `${API_BASE.replace(/\/$/, "")}/register`;
+const API_URL = `${API_BASE.replace(/\/$/, "")}/admins/register`;
+const COUNT_URL = `${API_BASE.replace(/\/$/, "")}/admins/count`;
 
-/* Variants framer-motion */
+// Animation variants
 const containerVariants = {
   hidden: { opacity: 0, scale: 0.995 },
   visible: {
@@ -34,19 +35,18 @@ const btnTap = { scale: 0.985 };
 export default function RegisterPage() {
   const navigate = useNavigate();
 
-  // état du formulaire (nom, prénom, email, photo/file, sexe, mot de passe)
+  // Form state
   const [form, setForm] = useState({
     lastName: "",
     firstName: "",
     email: "",
-    // photo URL (optionnel) — si l'utilisateur colle une URL ; on privilégie le fichier uploadé
     photo: "",
     sexe: "",
     password: "",
     terms: false,
   });
 
-  // état fichier pour upload (File) + preview URL
+  // File upload state
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState("");
   const dropRef = useRef(null);
@@ -56,6 +56,31 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState("");
   const [success, setSuccess] = useState(false);
+
+  // Admin check states
+  const [adminExists, setAdminExists] = useState(false);
+  const [checkingAdmin, setCheckingAdmin] = useState(true);
+
+  // Check admin count on mount
+  useEffect(() => {
+    const checkAdminCount = async () => {
+      try {
+        const response = await fetch(COUNT_URL);
+        if (response.ok) {
+          const data = await response.json();
+          setAdminExists(data.count > 0);
+        }
+      } catch (error) {
+        console.error(
+          "Erreur lors de la vérification du nombre d'admins:",
+          error
+        );
+      } finally {
+        setCheckingAdmin(false);
+      }
+    };
+    checkAdminCount();
+  }, []);
 
   // génération et nettoyage de la preview
   useEffect(() => {
@@ -131,17 +156,24 @@ export default function RegisterPage() {
     setFile(null);
   };
 
-  // envoi du formulaire : si file présent => FormData, sinon JSON
+  // Form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     setServerError("");
+
+    if (adminExists) {
+      setServerError(
+        "Un administrateur existe déjà. L'inscription n'est pas autorisée."
+      );
+      return;
+    }
+
     if (!validate()) return;
     setLoading(true);
 
     try {
       let res;
       if (file) {
-        // envoi multipart/form-data
         const fd = new FormData();
         fd.append("photo", file);
         fd.append("nom", form.lastName);
@@ -149,13 +181,11 @@ export default function RegisterPage() {
         fd.append("email", form.email);
         fd.append("sexe", form.sexe);
         fd.append("password", form.password);
-        // terms non envoyé (ou envoyer si nécessaire)
         res = await fetch(API_URL, {
           method: "POST",
-          body: fd, // pas d'entête Content-Type : browser le règle
+          body: fd,
         });
       } else {
-        // envoi JSON (photo peut être une URL dans form.photo)
         res = await fetch(API_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -181,10 +211,9 @@ export default function RegisterPage() {
         return;
       }
 
-      // succès — la validation finale et le stockage photo se font côté serveur / modèle MongoDB
       setSuccess(true);
       setLoading(false);
-      setTimeout(() => navigate("/dashboard"), 1200);
+      setTimeout(() => navigate("/login"), 1200);
     } catch (err) {
       setServerError("Impossible de contacter le serveur");
       setLoading(false);
@@ -193,18 +222,16 @@ export default function RegisterPage() {
 
   return (
     <motion.div
-      // wrapper principal centré
       className="flex items-center justify-center w-screen h-screen overflow-hidden bg-gradient-to-b from-slate-900 via-sky-900 to-sky-700"
       initial="hidden"
       animate="visible"
       variants={containerVariants}
     >
-      {/* conteneur principal côte à côte on md+, empilé sur small */}
       <div
         className="flex flex-col items-stretch w-full max-w-6xl mx-4 overflow-hidden shadow-xl md:mx-0 md:flex-row rounded-xl"
         style={{ minHeight: 520 }}
       >
-        {/* colonne image */}
+        {/* Colonne image */}
         <motion.div
           variants={leftVariants}
           className="relative flex items-center justify-center w-full text-center bg-black md:w-5/12 lg:w-6/12"
@@ -220,14 +247,15 @@ export default function RegisterPage() {
               BIENVENU SUR L'ESPACE ADMINISTRATEUR
             </h1>
             <p className="max-w-xs text-sm text-justify md:max-w-sm md:text-base opacity-95">
-              Créez votre compte en quelques secondes et accédez à votre tableau
-              de bord. Interface moderne et animations fluides.
+              {adminExists
+                ? "Un administrateur existe déjà dans le système. Veuillez contacter l'administrateur existant."
+                : "Créez votre compte administrateur en quelques secondes et accédez à votre tableau de bord."}
             </p>
             <small className="mt-2 text-xs opacity-90">© 2025 </small>
           </div>
         </motion.div>
 
-        {/* colonne formulaire */}
+        {/* Colonne formulaire */}
         <motion.div
           variants={formVariants}
           className="flex items-center justify-center w-full transition-colors bg-white md:w-7/12 lg:w-6/12 dark:bg-blue-900 dark:text-white"
