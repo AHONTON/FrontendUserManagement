@@ -29,10 +29,7 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/validate" element={<ValidateEmail />} />
 
-            {/* Redirection par défaut */}
-            <Route path="/" element={<Navigate to="/dashboard" />} />
-
-            {/* Routes protégées */}
+            {/* Routes protégées via PrivateRoute */}
             <Route
               path="/"
               element={
@@ -41,11 +38,18 @@ function App() {
                 </PrivateRoute>
               }
             >
+              {/* Redirection par défaut vers dashboard */}
+              <Route index element={<Navigate to="dashboard" replace />} />
+
+              {/* Pages protégées */}
               <Route path="dashboard" element={<DashboardPage />} />
               <Route path="users" element={<UsersPage />} />
               <Route path="profile" element={<ProfilePage />} />
               <Route path="support" element={<SupportPage />} />
             </Route>
+
+            {/* Catch-all pour routes inconnues */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>
       </AuthProvider>

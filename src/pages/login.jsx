@@ -1,14 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mail, Lock, Check, Eye, EyeOff } from "lucide-react";
+import { useAuth } from "../components/contexts/AuthContext";
 
-const API_BASE =
-  (import.meta?.env?.VITE_API_URL && String(import.meta.env.VITE_API_URL)) ||
-  "/api";
-const API_URL = `${API_BASE.replace(/\/$/, "")}/admin/login`;
-
-// Animation variants (similaires à register.jsx)
+// Animation variants
 const containerVariants = {
   hidden: { opacity: 0, scale: 0.995 },
   visible: {
@@ -33,14 +29,26 @@ const btnTap = { scale: 0.985 };
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { user, login } = useAuth();
 
-  const [form, setForm] = useState({ email: "", password: "", remember: false });
+  useEffect(() => {
+    if (user) {
+      navigate("/dashboard");
+    }
+  }, [user, navigate]);
+
+  const [form, setForm] = useState({
+    email: "",
+    password: "",
+    remember: false,
+  });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState("");
   const [success, setSuccess] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
 
+  // Validation côté client
   const validate = () => {
     const e = {};
     if (!form.email.trim()) e.email = "L'email est requis";
@@ -63,36 +71,21 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: form.email, password: form.password }),
+      const data = await login({
+        email: form.email,
+        password: form.password,
+        remember: form.remember,
       });
-
-      let data = {};
-      try {
-        data = await res.json();
-      } catch (_) {}
-
-      if (!res.ok) {
-        setServerError(data?.message || `Erreur serveur (${res.status})`);
-        setLoading(false);
-        return;
+      if (data?.user) {
+        setSuccess(true);
+        setTimeout(() => navigate("/dashboard"), 800);
       }
-
-      // si token renvoyé, stocker selon remember
-      if (data?.token) {
-        try {
-          if (form.remember) localStorage.setItem("token", data.token);
-          else sessionStorage.setItem("token", data.token);
-        } catch (_) {}
-      }
-
-      setSuccess(true);
-      setLoading(false);
-      setTimeout(() => navigate("/"), 900);
     } catch (err) {
-      setServerError("Impossible de contacter le serveur");
+      setServerError(
+        err.response?.data?.message ||
+          "Identifiants invalides ou erreur serveur"
+      );
+    } finally {
       setLoading(false);
     }
   };
@@ -108,6 +101,7 @@ export default function LoginPage() {
         className="flex flex-col items-stretch w-full max-w-4xl mx-4 overflow-hidden shadow-xl md:mx-0 md:flex-row rounded-xl"
         style={{ minHeight: 480 }}
       >
+        {/* Illustration côté gauche */}
         <motion.div
           variants={leftVariants}
           className="relative flex items-center justify-center w-full text-center bg-black md:w-5/12 lg:w-6/12"
@@ -129,6 +123,7 @@ export default function LoginPage() {
           </div>
         </motion.div>
 
+        {/* Formulaire côté droit */}
         <motion.div
           variants={formVariants}
           className="flex items-center justify-center w-full transition-colors bg-white md:w-7/12 lg:w-6/12"
@@ -148,10 +143,16 @@ export default function LoginPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Email */}
               <motion.div variants={fieldVariants}>
-                <label className="block text-xs font-medium text-black">EMAIL</label>
+                <label className="block text-xs font-medium text-black">
+                  EMAIL
+                </label>
                 <div className="relative mt-1">
-                  <Mail className="absolute left-3 top-3 text-slate-400" size={16} />
+                  <Mail
+                    className="absolute left-3 top-3 text-slate-400"
+                    size={16}
+                  />
                   <input
                     name="email"
                     value={form.email}
@@ -163,13 +164,21 @@ export default function LoginPage() {
                     placeholder="Entrez votre email"
                   />
                 </div>
-                {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email}</p>}
+                {errors.email && (
+                  <p className="mt-1 text-xs text-red-500">{errors.email}</p>
+                )}
               </motion.div>
 
+              {/* Mot de passe */}
               <motion.div variants={fieldVariants}>
-                <label className="block text-xs font-medium text-black">MOT DE PASSE</label>
+                <label className="block text-xs font-medium text-black">
+                  MOT DE PASSE
+                </label>
                 <div className="relative mt-1">
-                  <Lock className="absolute left-3 top-3 text-slate-400" size={16} />
+                  <Lock
+                    className="absolute left-3 top-3 text-slate-400"
+                    size={16}
+                  />
                   <input
                     name="password"
                     value={form.password}
@@ -188,10 +197,16 @@ export default function LoginPage() {
                     {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
-                {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password}</p>}
+                {errors.password && (
+                  <p className="mt-1 text-xs text-red-500">{errors.password}</p>
+                )}
               </motion.div>
 
-              <motion.div variants={fieldVariants} className="flex items-center justify-between mt-2">
+              {/* Remember me & forgot password */}
+              <motion.div
+                variants={fieldVariants}
+                className="flex items-center justify-between mt-2"
+              >
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
                   <input
                     type="checkbox"
@@ -212,8 +227,12 @@ export default function LoginPage() {
                 </button>
               </motion.div>
 
-              {serverError && <div className="text-sm text-red-600">{serverError}</div>}
+              {/* Erreurs serveur */}
+              {serverError && (
+                <div className="text-sm text-red-600">{serverError}</div>
+              )}
 
+              {/* Bouton connexion */}
               <motion.button
                 type="submit"
                 whileTap={btnTap}
@@ -226,7 +245,10 @@ export default function LoginPage() {
 
               <div className="mt-4 text-sm text-center text-slate-600">
                 Pas de compte ?{" "}
-                <button onClick={() => navigate("/register")} className="underline text-sky-600">
+                <button
+                  onClick={() => navigate("/register")}
+                  className="underline text-sky-600"
+                >
                   S'inscrire
                 </button>
               </div>
@@ -235,6 +257,7 @@ export default function LoginPage() {
         </motion.div>
       </div>
 
+      {/* Success notification */}
       <AnimatePresence>
         {success && (
           <motion.div

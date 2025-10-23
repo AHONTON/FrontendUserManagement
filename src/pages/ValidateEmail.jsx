@@ -49,13 +49,16 @@ export default function ValidateEmailPage() {
     setStatus("loading");
 
     try {
-      const response = await fetch("http://localhost:5000/admin/validate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ token }),
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/admin/validate`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ token }),
+        }
+      );
 
       const data = await response.json();
 
