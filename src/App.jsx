@@ -27,7 +27,7 @@ function App() {
             {/* Pages publiques */}
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/validate_email" element={<ValidateEmail />} />
+            <Route path="/validate" element={<ValidateEmail />} />
 
             {/* Redirection par défaut */}
             <Route path="/" element={<Navigate to="/dashboard" />} />
