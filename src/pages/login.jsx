@@ -6,7 +6,7 @@ import { Mail, Lock, Check, Eye, EyeOff } from "lucide-react";
 const API_BASE =
   (import.meta?.env?.VITE_API_URL && String(import.meta.env.VITE_API_URL)) ||
   "/api";
-const API_URL = `${API_BASE.replace(/\/$/, "")}/admins/login`;
+const API_URL = `${API_BASE.replace(/\/$/, "")}/admin/login`;
 
 // Animation variants (similaires à register.jsx)
 const containerVariants = {

@@ -16,6 +16,7 @@ import ProfilePage from "./pages/ProfilePage";
 import SupportPage from "./pages/SupportPage";
 import RegisterPage from "./pages/register";
 import LoginPage from "./pages/login";
+import ValidateEmail from "./pages/ValidateEmail";
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
             {/* Pages publiques */}
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/validate_email" element={<ValidateEmail />} />
 
             {/* Redirection par défaut */}
             <Route path="/" element={<Navigate to="/dashboard" />} />

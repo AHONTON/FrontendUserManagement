@@ -6,8 +6,8 @@ import { User, Mail, Lock, Check, Image as ImageIcon, X } from "lucide-react";
 const API_BASE =
   (import.meta?.env?.VITE_API_URL && String(import.meta.env.VITE_API_URL)) ||
   "/api";
-const API_URL = `${API_BASE.replace(/\/$/, "")}/admins/register`;
-const COUNT_URL = `${API_BASE.replace(/\/$/, "")}/admins/count`;
+const API_URL = `${API_BASE.replace(/\/$/, "")}/admin/register`;
+const COUNT_URL = `${API_BASE.replace(/\/$/, "")}/admin/count`;
 
 // Animation variants
 const containerVariants = {
@@ -72,7 +72,7 @@ export default function RegisterPage() {
         }
       } catch (error) {
         console.error(
-          "Erreur lors de la vérification du nombre d'admins:",
+          "Erreur lors de la vérification du nombre d'admin:",
           error
         );
       } finally {
