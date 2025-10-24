@@ -47,9 +47,10 @@ export default function Dashboard() {
       }
 
       const data = await response.json();
-      setUsers(Array.isArray(data) ? data : data.users || []);
+      setUsers(Array.isArray(data) ? data : data.data || []);
 
-      SwalHelper.success("Utilisateurs chargés avec succès");
+      loadingAlert.close();
+      console.log("✅ Utilisateurs chargés :", data.data || []);
     } catch (error) {
       SwalHelper.error("Erreur", error.message);
     } finally {
@@ -300,12 +301,12 @@ export default function Dashboard() {
                 <AnimatePresence>
                   {currentUsers.map((user, index) => (
                     <UserCard
-                      key={user.id}
+                      key={user._id || user.id || `temp-${index}`}
                       user={user}
                       index={index}
                       onView={() => handleViewDetails(user)}
                       onEdit={() => openEditModal(user)}
-                      onDelete={() => handleDeleteUser(user.id)}
+                      onDelete={() => handleDeleteUser(user._id || user.id)}
                     />
                   ))}
                 </AnimatePresence>

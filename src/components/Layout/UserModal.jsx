@@ -1,11 +1,10 @@
-"use client";
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
+// UserModal component for adding/editing users
 export default function UserModal({ isOpen, onClose, onSubmit, editingUser }) {
   const [formData, setFormData] = useState({
-    photo: "",
+    photo: null,
     nom: "",
     prenoms: "",
     email: "",
@@ -24,7 +23,7 @@ export default function UserModal({ isOpen, onClose, onSubmit, editingUser }) {
       setFormData(editingUser);
     } else {
       setFormData({
-        photo: "",
+        photo: null,
         nom: "",
         prenoms: "",
         email: "",
@@ -40,11 +39,7 @@ export default function UserModal({ isOpen, onClose, onSubmit, editingUser }) {
     }
   }, [editingUser, isOpen]);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSubmit(formData);
-  };
-
+  // Handle input changes
   const handleChange = (e) => {
     setFormData((prev) => ({
       ...prev,
@@ -52,6 +47,26 @@ export default function UserModal({ isOpen, onClose, onSubmit, editingUser }) {
     }));
   };
 
+  // Drag and drop state and ref
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef();
+
+  // Handle form submission
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    // Préparer les données du formulaire
+    const data = new FormData();
+    for (const key in formData) {
+      if (formData[key] !== null) {
+        data.append(key, formData[key]);
+      }
+    }
+
+    onSubmit(data); // Assure-toi que ton onSubmit sait gérer FormData
+  };
+
+  // Render modal
   return (
     <AnimatePresence>
       {isOpen && (
@@ -104,18 +119,53 @@ export default function UserModal({ isOpen, onClose, onSubmit, editingUser }) {
                 {/* Photo */}
                 <div className="md:col-span-2">
                   <label className="block mb-2 text-sm font-medium text-gray-700">
-                    Photo (URL)
+                    Photo
                   </label>
-                  <input
-                    type="url"
-                    name="photo"
-                    value={formData.photo}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 transition-all border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="https://exemple.com/photo.jpg"
-                  />
+                  <div
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setDragOver(true);
+                    }}
+                    onDragLeave={() => setDragOver(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setDragOver(false);
+                      const file = e.dataTransfer.files[0];
+                      if (file) setFormData({ ...formData, photo: file });
+                    }}
+                    onClick={() => fileInputRef.current.click()}
+                    className={`w-full px-4 py-12 border-2 border-dashed rounded-lg cursor-pointer transition-all duration-200 ${
+                      dragOver
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-300 bg-white"
+                    } flex flex-col items-center justify-center text-center`}
+                  >
+                    {formData.photo ? (
+                      <p className="text-sm text-gray-700 truncate">
+                        {formData.photo.name}
+                      </p>
+                    ) : (
+                      <>
+                        <p className="text-gray-400">
+                          Glissez-déposez votre photo ici
+                        </p>
+                        <p className="mt-1 text-xs text-gray-400">
+                          ou cliquez pour sélectionner un fichier
+                        </p>
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      ref={fileInputRef}
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) setFormData({ ...formData, photo: file });
+                      }}
+                      className="hidden"
+                    />
+                  </div>
                 </div>
-
                 {/* Nom */}
                 <div>
                   <label className="block mb-2 text-sm font-medium text-gray-700">
