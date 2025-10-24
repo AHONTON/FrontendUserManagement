@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { User, Users, Briefcase, Grid, Search, Download } from "lucide-react";
 import Modal from "../components/UI/Modal";
 import SwalHelper from "./../utils/SwalHelper";
+import { useAuth } from "../components/contexts/AuthContext";
 
 // Définir l'URL de base de l'API avec Vite
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
@@ -17,38 +18,48 @@ const cardVariants = {
 };
 
 const DashboardPage = () => {
+  const { user } = useAuth(); // on récupère l'user pour vérifier si connecté
   const [statsData, setStatsData] = useState([]);
   const [recentUsers, setRecentUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Récupérer le token d'authentification depuis localStorage
-  const authToken = localStorage.getItem("authToken") || "";
+  // 🔐 Récupérer le token depuis AuthContext/localStorage
+  const getAuthToken = () => {
+    const token =
+      localStorage.getItem("auth_token") ||
+      sessionStorage.getItem("auth_token");
+    if (!token) {
+      SwalHelper.error(
+        "Erreur",
+        "Aucun token d'authentification trouvé. Veuillez vous connecter."
+      );
+    }
+    return token;
+  };
 
-  // Fetcher les données de l'API au montage du composant
   useEffect(() => {
-    // Appel API pour récupérer les statistiques avec alertes et authentification
     const fetchStats = async () => {
       SwalHelper.loading(
         "Chargement des statistiques",
         "Veuillez patienter..."
       );
       try {
+        const token = getAuthToken();
+        if (!token) return;
+
         const response = await fetch(`${API_URL}/stats`, {
           headers: {
-            Authorization: `Bearer ${authToken}`,
+            Authorization: `Bearer ${token}`,
             Accept: "application/json",
           },
         });
-        if (!response.ok) {
-          throw new Error(
-            response.status === 401
-              ? "Unauthorized"
-              : "Erreur lors de la récupération des statistiques"
-          );
-        }
+
+        if (!response.ok)
+          throw new Error("Erreur lors de la récupération des statistiques");
         const data = await response.json();
+
         const mappedStats = [
           {
             label: "Total Utilisateurs",
@@ -74,36 +85,30 @@ const DashboardPage = () => {
         setStatsData(mappedStats);
         SwalHelper.success("Succès", "Statistiques chargées avec succès");
       } catch (error) {
-        SwalHelper.error(
-          "Erreur",
-          error.message === "Unauthorized"
-            ? "Authentification requise"
-            : "Impossible de charger les statistiques"
-        );
+        SwalHelper.error("Erreur", error.message);
         console.error("Erreur fetch stats:", error);
       }
     };
 
-    // Appel API pour récupérer les 5 derniers utilisateurs avec alertes et authentification
     const fetchRecentUsers = async () => {
       SwalHelper.loading(
         "Chargement des utilisateurs",
         "Veuillez patienter..."
       );
       try {
+        const token = getAuthToken();
+        if (!token) return;
+
         const response = await fetch(`${API_URL}/recent-users?limit=5`, {
           headers: {
-            Authorization: `Bearer ${authToken}`,
+            Authorization: `Bearer ${token}`,
             Accept: "application/json",
           },
         });
-        if (!response.ok) {
+        if (!response.ok)
           throw new Error(
-            response.status === 401
-              ? "Unauthorized"
-              : "Erreur lors de la récupération des utilisateurs récents"
+            "Erreur lors de la récupération des utilisateurs récents"
           );
-        }
         const data = await response.json();
         setRecentUsers(data);
         SwalHelper.success(
@@ -111,31 +116,18 @@ const DashboardPage = () => {
           "Utilisateurs récents chargés avec succès"
         );
       } catch (error) {
-        SwalHelper.error(
-          "Erreur",
-          error.message === "Unauthorized"
-            ? "Authentification requise"
-            : "Impossible de charger les utilisateurs récents"
-        );
+        SwalHelper.error("Erreur", error.message);
         console.error("Erreur fetch users:", error);
       }
     };
 
-    // Vérifier si le token existe avant de lancer les requêtes
-    if (authToken) {
+    if (getAuthToken()) {
       fetchStats();
       fetchRecentUsers();
-    } else {
-      SwalHelper.error(
-        "Erreur",
-        "Aucun token d'authentification trouvé. Veuillez vous connecter."
-      );
     }
-  }, [authToken]);
+  }, [user]);
 
-  // Fonction pour gérer l'exportation des utilisateurs
   const handleExportUsers = async () => {
-    // Afficher une confirmation avant de lancer l'exportation
     const result = await SwalHelper.confirm(
       "Exporter les utilisateurs",
       "Voulez-vous exporter la liste des utilisateurs ?",
@@ -143,23 +135,18 @@ const DashboardPage = () => {
     );
     if (!result.isConfirmed) return;
 
-    // Appel API pour exporter les utilisateurs avec authentification
     SwalHelper.loading("Exportation en cours", "Génération du fichier...");
     try {
+      const token = getAuthToken();
+      if (!token) return;
+
       const response = await fetch(`${API_URL}/export-users`, {
         method: "GET",
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-          Accept: "text/csv",
-        },
+        headers: { Authorization: `Bearer ${token}`, Accept: "text/csv" },
       });
-      if (!response.ok) {
-        throw new Error(
-          response.status === 401
-            ? "Unauthorized"
-            : "Erreur lors de l'exportation des utilisateurs"
-        );
-      }
+      if (!response.ok)
+        throw new Error("Erreur lors de l'exportation des utilisateurs");
+
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -171,23 +158,17 @@ const DashboardPage = () => {
       window.URL.revokeObjectURL(url);
       SwalHelper.success("Succès", "Fichier exporté avec succès");
     } catch (error) {
-      SwalHelper.error(
-        "Erreur",
-        error.message === "Unauthorized"
-          ? "Authentification requise"
-          : "Impossible d'exporter les utilisateurs"
-      );
+      SwalHelper.error("Erreur", error.message);
       console.error("Erreur export users:", error);
     }
   };
 
-  // Filtrer les utilisateurs selon la recherche
   const filteredUsers = useMemo(() => {
     return recentUsers.filter(
-      (user) =>
-        user.nom.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.prenoms.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchQuery.toLowerCase())
+      (u) =>
+        u.nom.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        u.prenoms.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        u.email.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [searchQuery, recentUsers]);
 
@@ -198,6 +179,7 @@ const DashboardPage = () => {
 
   return (
     <div className="flex flex-col h-full p-6 space-y-6 bg-gray-50 dark:bg-gray-900">
+      {/* Stats cards */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         {statsData.map((stat, i) => (
           <motion.div
@@ -223,6 +205,7 @@ const DashboardPage = () => {
         ))}
       </div>
 
+      {/* Users section */}
       <div className="flex flex-col flex-1 space-y-4 overflow-hidden">
         <div className="flex flex-col items-start justify-between space-y-3 md:flex-row md:items-center md:space-y-0">
           <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
@@ -242,7 +225,7 @@ const DashboardPage = () => {
             <button
               onClick={handleExportUsers}
               className="flex items-center px-3 py-2 text-white bg-blue-600 rounded-xl hover:bg-blue-700"
-              disabled={!authToken} // Désactiver le bouton si pas de token
+              disabled={!getAuthToken()}
             >
               <Download className="w-4 h-4 mr-1" /> Exporter
             </button>
@@ -283,6 +266,7 @@ const DashboardPage = () => {
         </div>
       </div>
 
+      {/* User modal */}
       <AnimatePresence>
         {isModalOpen && selectedUser && (
           <Modal

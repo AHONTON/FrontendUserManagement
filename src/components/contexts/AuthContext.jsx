@@ -7,7 +7,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Vérification de l'authentification au chargement
+  // 🔍 Vérification automatique de l'authentification au chargement
   useEffect(() => {
     const checkAuth = async () => {
       const token =
@@ -22,7 +22,6 @@ export const AuthProvider = ({ children }) => {
       try {
         console.log("🔍 Token trouvé, vérification de l'authentification...");
 
-        // ✅ Changer l'URL pour ton endpoint correct qui renvoie l'utilisateur connecté
         const response = await axios.get("http://127.0.0.1:5000/api/admin/me", {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -31,7 +30,7 @@ export const AuthProvider = ({ children }) => {
         });
 
         console.log("✅ Utilisateur authentifié:", response.data);
-        setUser(response.data); // ou response.data.user selon ton backend
+        setUser(response.data);
       } catch (error) {
         console.error("❌ Erreur de vérification auth:", error);
         localStorage.removeItem("auth_token");
@@ -45,7 +44,7 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, []);
 
-  // Connexion utilisateur
+  // 🔐 Connexion utilisateur
   const login = async ({ email, password, remember }) => {
     try {
       console.log("🔐 Tentative de connexion pour:", email);
@@ -60,7 +59,8 @@ export const AuthProvider = ({ children }) => {
       if (res.data.token) {
         if (remember) localStorage.setItem("auth_token", res.data.token);
         else sessionStorage.setItem("auth_token", res.data.token);
-        console.log("💾 Token stocké");
+
+        console.log("💾 Token stocké avec succès");
       }
 
       return res.data;
@@ -70,18 +70,20 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Inscription
+  // 📝 Inscription utilisateur
   const register = (userData, token, remember = true) => {
     console.log("📝 Inscription avec:", userData);
     setUser(userData);
+
     if (token) {
       if (remember) localStorage.setItem("auth_token", token);
       else sessionStorage.setItem("auth_token", token);
+
       console.log("💾 Token d'inscription stocké");
     }
   };
 
-  // Déconnexion
+  // 🚪 Déconnexion
   const logout = async () => {
     try {
       const token =
@@ -120,6 +122,7 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
+// ✅ Hook personnalisé
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {

@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Users, ChevronLeft, ChevronRight } from "lucide-react";
@@ -24,13 +22,33 @@ export default function Dashboard() {
   // Fonction pour charger les utilisateurs depuis l'API
   const fetchUsers = async () => {
     const loadingAlert = SwalHelper.loading("Chargement des utilisateurs...");
+
     try {
-      const response = await fetch(`${API_URL}/user`);
-      if (!response.ok) {
-        throw new Error("Erreur lors du chargement des utilisateurs");
+      const token =
+        localStorage.getItem("auth_token") ||
+        sessionStorage.getItem("auth_token");
+
+      if (!token) {
+        throw new Error("Token non trouvé. Veuillez vous reconnecter.");
       }
+
+      const response = await fetch(`${API_URL}/user`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`, // ✅ envoie le JWT ici
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error("Accès non autorisé. Token invalide ou expiré.");
+        }
+        throw new Error("Erreur lors du chargement des utilisateurs.");
+      }
+
       const data = await response.json();
       setUsers(Array.isArray(data) ? data : data.users || []);
+
       SwalHelper.success("Utilisateurs chargés avec succès");
     } catch (error) {
       SwalHelper.error("Erreur", error.message);
@@ -44,19 +62,28 @@ export default function Dashboard() {
   }, []);
 
   const handleAddUser = async (userData) => {
+    const token =
+      localStorage.getItem("auth_token") ||
+      sessionStorage.getItem("auth_token");
+    if (!token) {
+      SwalHelper.error("Token non trouvé. Veuillez vous reconnecter.");
+      return;
+    }
+
     const loadingAlert = SwalHelper.loading("Ajout de l'utilisateur...");
     try {
       const response = await fetch(`${API_URL}/user`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(userData),
       });
       if (!response.ok) {
         throw new Error("Erreur lors de l'ajout de l'utilisateur");
       }
-      await fetchUsers(); // Recharger la liste après ajout
+      await fetchUsers();
       setIsModalOpen(false);
       SwalHelper.success("Succès", "Utilisateur ajouté avec succès");
     } catch (error) {
@@ -67,19 +94,28 @@ export default function Dashboard() {
   };
 
   const handleEditUser = async (userData) => {
+    const token =
+      localStorage.getItem("auth_token") ||
+      sessionStorage.getItem("auth_token");
+    if (!token) {
+      SwalHelper.error("Token non trouvé. Veuillez vous reconnecter.");
+      return;
+    }
+
     const loadingAlert = SwalHelper.loading("Mise à jour de l'utilisateur...");
     try {
       const response = await fetch(`${API_URL}/user/${editingUser.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(userData),
       });
       if (!response.ok) {
         throw new Error("Erreur lors de la mise à jour de l'utilisateur");
       }
-      await fetchUsers(); // Recharger la liste après édition
+      await fetchUsers();
       setEditingUser(null);
       setIsModalOpen(false);
       SwalHelper.success("Succès", "Utilisateur mis à jour avec succès");
@@ -101,9 +137,22 @@ export default function Dashboard() {
         "Suppression de l'utilisateur..."
       );
       try {
+        const token =
+          localStorage.getItem("auth_token") ||
+          sessionStorage.getItem("auth_token");
+        if (!token) {
+          SwalHelper.error("Token non trouvé. Veuillez vous reconnecter.");
+          return;
+        }
+
         const response = await fetch(`${API_URL}/user/${userId}`, {
           method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
         });
+
         if (!response.ok) {
           throw new Error("Erreur lors de la suppression de l'utilisateur");
         }
@@ -125,7 +174,21 @@ export default function Dashboard() {
   const handleViewDetails = async (user) => {
     const loadingAlert = SwalHelper.loading("Chargement des détails...");
     try {
-      const response = await fetch(`${API_URL}/user/${user.id}`);
+      const token =
+        localStorage.getItem("auth_token") ||
+        sessionStorage.getItem("auth_token");
+      if (!token) {
+        SwalHelper.error("Token non trouvé. Veuillez vous reconnecter.");
+        return;
+      }
+
+      const response = await fetch(`${API_URL}/user/${user.id}`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
       if (!response.ok) {
         throw new Error("Erreur lors du chargement des détails");
       }
