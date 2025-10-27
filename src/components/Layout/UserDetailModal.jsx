@@ -1,23 +1,21 @@
-"use client";
-
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  User, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  Briefcase, 
-  Building, 
-  Navigation, 
-  AlertTriangle, 
-  Target, 
+import {
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  Briefcase,
+  Building,
+  Navigation,
+  AlertTriangle,
+  Target,
   X,
-  UserCircle
+  UserCircle,
 } from "lucide-react";
 import { useTheme } from "../contexts/ThemeContext";
 
 export default function UserDetailModal({ isOpen, onClose, user }) {
-  const { theme, isDark } = useTheme();
+  const { isDark } = useTheme();
   if (!user) return null;
 
   const fields = [
@@ -26,27 +24,11 @@ export default function UserDetailModal({ isOpen, onClose, user }) {
     { label: "Email", value: user.email, icon: Mail },
     { label: "Téléphone", value: user.telephone, icon: Phone },
     { label: "Résidence", value: user.residence, icon: MapPin },
-    {
-      label: "Domaine de compétence",
-      value: user.domaine,
-      icon: Target,
-    },
-    {
-      label: "Fonction actuelle",
-      value: user.fonction,
-      icon: Briefcase,
-    },
+    { label: "Domaine de compétence", value: user.domaine, icon: Target },
+    { label: "Fonction actuelle", value: user.fonction, icon: Briefcase },
     { label: "Structure", value: user.structure, icon: Building },
-    {
-      label: "Lieu de travail",
-      value: user.lieuTravail,
-      icon: Navigation,
-    },
-    {
-      label: "Contact d'urgence",
-      value: user.contact,
-      icon: AlertTriangle,
-    },
+    { label: "Lieu de travail", value: user.lieuTravail, icon: Navigation },
+    { label: "Contact d'urgence", value: user.contact, icon: AlertTriangle },
     { label: "Opportunités", value: user.opportunites, icon: Target },
   ];
 
@@ -65,17 +47,13 @@ export default function UserDetailModal({ isOpen, onClose, user }) {
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
             className={`rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden transition-colors duration-300
-              ${
-                isDark
-                  ? "bg-gray-900 text-gray-100"
-                  : "bg-white text-gray-900"
-              }
+              ${isDark ? "bg-gray-900 text-gray-100" : "bg-white text-gray-900"}
             `}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header avec photo */}
             <div
-              className={`relative p-8 text-white transition-colors duration-300 
+              className={`relative p-8 transition-colors duration-300 
                 ${
                   isDark
                     ? "bg-gradient-to-r from-gray-800 to-gray-700"
@@ -87,33 +65,32 @@ export default function UserDetailModal({ isOpen, onClose, user }) {
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={onClose}
-                className="absolute p-2 transition-all duration-300 rounded-full top-6 right-6 bg-white/10 hover:bg-white/20 text-white/80 hover:text-white"
+                className="absolute p-2 rounded-full top-6 right-6 bg-white/10 hover:bg-white/20 text-white/80 hover:text-white"
               >
                 <X className="w-5 h-5" />
               </motion.button>
 
               <div className="flex flex-col items-center gap-6 sm:flex-row">
-                <motion.div 
+                <motion.div
                   initial={{ scale: 0.8, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ delay: 0.1 }}
-                  className="overflow-hidden border-4 rounded-full shadow-xl w-28 h-28 border-white/30 bg-white/10 backdrop-blur-sm"
+                  className="flex items-center justify-center overflow-hidden border-4 rounded-full shadow-xl w-28 h-28 border-white/30 bg-white/10 backdrop-blur-sm"
                 >
-                  <img
-                    src={user.photo || "/professional-headshot.png"}
-                    alt={`${user.prenoms} ${user.nom}`}
-                    className="object-cover w-full h-full"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      e.target.nextSibling.style.display = 'flex';
-                    }}
-                  />
-                  <div className="items-center justify-center hidden w-full h-full">
+                  {user.photo ? (
+                    <img
+                      src={user.photo}
+                      alt={`${user.prenoms} ${user.nom}`}
+                      className="object-cover w-full h-full"
+                      onError={(e) => (e.target.style.display = "none")}
+                    />
+                  ) : (
                     <User className="w-16 h-16 text-white/60" />
-                  </div>
+                  )}
                 </motion.div>
+
                 <div className="text-center sm:text-left">
-                  <motion.h2 
+                  <motion.h2
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.2 }}
@@ -121,21 +98,21 @@ export default function UserDetailModal({ isOpen, onClose, user }) {
                   >
                     {user.prenoms} {user.nom}
                   </motion.h2>
-                  <motion.p 
+                  <motion.p
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.3 }}
                     className="mb-1 text-lg opacity-90"
                   >
-                    {user.fonction}
+                    {user.fonction || "Non renseigné"}
                   </motion.p>
-                  <motion.p 
+                  <motion.p
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.4 }}
                     className="opacity-70"
                   >
-                    {user.structure}
+                    {user.structure || "Non renseigné"}
                   </motion.p>
                 </div>
               </div>
@@ -143,7 +120,7 @@ export default function UserDetailModal({ isOpen, onClose, user }) {
 
             {/* Contenu détaillé */}
             <div className="p-8 max-h-[60vh] overflow-y-auto">
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
@@ -185,11 +162,17 @@ export default function UserDetailModal({ isOpen, onClose, user }) {
                           >
                             {field.label}
                           </h3>
-                          <p className={`font-medium break-words leading-relaxed ${
-                            field.value 
-                              ? (isDark ? "text-gray-100" : "text-gray-900")
-                              : (isDark ? "text-gray-500 italic" : "text-gray-400 italic")
-                          }`}>
+                          <p
+                            className={`font-medium break-words leading-relaxed ${
+                              field.value
+                                ? isDark
+                                  ? "text-gray-100"
+                                  : "text-gray-900"
+                                : isDark
+                                ? "text-gray-500 italic"
+                                : "text-gray-400 italic"
+                            }`}
+                          >
                             {field.value || "Non renseigné"}
                           </p>
                         </div>
@@ -199,7 +182,7 @@ export default function UserDetailModal({ isOpen, onClose, user }) {
                 })}
               </motion.div>
 
-              {/* Actions */}
+              {/* Bouton fermer */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -212,13 +195,11 @@ export default function UserDetailModal({ isOpen, onClose, user }) {
                   whileHover={{ scale: 1.02, y: -1 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={onClose}
-                  className={`px-8 py-3 font-semibold rounded-xl shadow-lg transition-all duration-300 
-                    ${
-                      isDark
-                        ? "bg-gradient-to-r from-gray-700 to-gray-600 text-gray-100 hover:from-gray-600 hover:to-gray-500 hover:shadow-xl"
-                        : "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 hover:shadow-xl"
-                    }
-                  `}
+                  className={`px-8 py-3 font-semibold rounded-xl shadow-lg transition-all duration-300 ${
+                    isDark
+                      ? "bg-gradient-to-r from-gray-700 to-gray-600 text-gray-100 hover:from-gray-600 hover:to-gray-500 hover:shadow-xl"
+                      : "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 hover:shadow-xl"
+                  }`}
                 >
                   Fermer
                 </motion.button>

@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-// UserModal component for adding/editing users
 export default function UserModal({ isOpen, onClose, onSubmit, editingUser }) {
   const [formData, setFormData] = useState({
     photo: null,
@@ -18,9 +17,36 @@ export default function UserModal({ isOpen, onClose, onSubmit, editingUser }) {
     opportunites: "",
   });
 
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef();
+
+  // Pré-remplissage des champs et photo
   useEffect(() => {
     if (editingUser) {
-      setFormData(editingUser);
+      setFormData({
+        photo: null,
+        nom: editingUser.nom || "",
+        prenoms: editingUser.prenoms || "",
+        email: editingUser.email || "",
+        telephone: editingUser.telephone || "",
+        residence: editingUser.residence || "",
+        domaine: editingUser.domaine || "",
+        fonction: editingUser.fonction || "",
+        structure: editingUser.structure || "",
+        lieuTravail: editingUser.lieuTravail || "",
+        contact: editingUser.contact || "",
+        opportunites: editingUser.opportunites || "",
+      });
+
+      // Affiche la photo existante uniquement si aucune photo temporaire
+      if (editingUser.photo) {
+        setPreviewUrl(
+          `${import.meta.env.VITE_FILE_BASE_URL}/${editingUser.photo}`
+        );
+      } else {
+        setPreviewUrl(null);
+      }
     } else {
       setFormData({
         photo: null,
@@ -36,37 +62,53 @@ export default function UserModal({ isOpen, onClose, onSubmit, editingUser }) {
         contact: "",
         opportunites: "",
       });
+      setPreviewUrl(null);
     }
-  }, [editingUser, isOpen]);
+  }, [editingUser]);
 
-  // Handle input changes
-  const handleChange = (e) => {
-    setFormData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }));
+  // Gestion des fichiers (nouvelle photo)
+  const handleFileSelect = (file) => {
+    if (!file) return;
+
+    // Révoque l'ancienne URL blob
+    if (previewUrl && previewUrl.startsWith("blob:")) {
+      URL.revokeObjectURL(previewUrl);
+    }
+
+    setFormData((prev) => ({ ...prev, photo: file }));
+    setPreviewUrl(URL.createObjectURL(file));
   };
 
-  // Drag and drop state and ref
-  const [dragOver, setDragOver] = useState(false);
-  const fileInputRef = useRef();
+  // Gestion des champs texte
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
-  // Handle form submission
+  // Soumission
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // Préparer les données du formulaire
-    const data = new FormData();
-    for (const key in formData) {
-      if (formData[key] !== null) {
-        data.append(key, formData[key]);
-      }
+    if (
+      !formData.nom ||
+      !formData.prenoms ||
+      !formData.email ||
+      !formData.telephone
+    ) {
+      alert("Veuillez remplir tous les champs obligatoires !");
+      return;
     }
 
-    onSubmit(data); // Assure-toi que ton onSubmit sait gérer FormData
+    const data = new FormData();
+    Object.entries(formData).forEach(([key, value]) => {
+      if (value !== null && value !== "") data.append(key, value);
+    });
+
+    onSubmit(data);
   };
 
-  // Render modal
+  if (!isOpen) return null;
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -81,268 +123,114 @@ export default function UserModal({ isOpen, onClose, onSubmit, editingUser }) {
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="p-6 text-white bg-gradient-to-r from-blue-600 to-blue-700">
-              <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold">
-                  {editingUser
-                    ? "Modifier l'utilisateur"
-                    : "Ajouter un utilisateur"}
-                </h2>
-                <button
-                  onClick={onClose}
-                  className="transition-colors text-white/80 hover:text-white"
-                >
-                  <svg
-                    className="w-6 h-6"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              </div>
+            <div className="flex items-center justify-between p-6 text-white bg-gradient-to-r from-blue-600 to-blue-700">
+              <h2 className="text-2xl font-bold">
+                {editingUser
+                  ? "Modifier l'utilisateur"
+                  : "Ajouter un utilisateur"}
+              </h2>
+              <button
+                onClick={onClose}
+                className="text-white/80 hover:text-white"
+              >
+                ✕
+              </button>
             </div>
 
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="p-6">
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                {/* Photo */}
-                <div className="md:col-span-2">
-                  <label className="block mb-2 text-sm font-medium text-gray-700">
-                    Photo
-                  </label>
-                  <div
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      setDragOver(true);
-                    }}
-                    onDragLeave={() => setDragOver(false)}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      setDragOver(false);
-                      const file = e.dataTransfer.files[0];
-                      if (file) setFormData({ ...formData, photo: file });
-                    }}
-                    onClick={() => fileInputRef.current.click()}
-                    className={`w-full px-4 py-12 border-2 border-dashed rounded-lg cursor-pointer transition-all duration-200 ${
-                      dragOver
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-300 bg-white"
-                    } flex flex-col items-center justify-center text-center`}
-                  >
-                    {formData.photo ? (
-                      <p className="text-sm text-gray-700 truncate">
-                        {formData.photo.name}
-                      </p>
-                    ) : (
-                      <>
-                        <p className="text-gray-400">
-                          Glissez-déposez votre photo ici
-                        </p>
-                        <p className="mt-1 text-xs text-gray-400">
-                          ou cliquez pour sélectionner un fichier
-                        </p>
-                      </>
-                    )}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      ref={fileInputRef}
-                      onChange={(e) => {
-                        const file = e.target.files[0];
-                        if (file) setFormData({ ...formData, photo: file });
-                      }}
-                      className="hidden"
+            {/* Formulaire */}
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              {/* Photo */}
+              <div className="md:col-span-2">
+                <label className="block mb-2 text-sm font-medium text-gray-700">
+                  Photo
+                </label>
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragOver(true);
+                  }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragOver(false);
+                    handleFileSelect(e.dataTransfer.files[0]);
+                  }}
+                  onClick={() => fileInputRef.current.click()}
+                  className={`w-full px-4 py-10 border-2 border-dashed rounded-lg cursor-pointer transition-all duration-200 flex flex-col items-center justify-center text-center ${
+                    dragOver
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-gray-300 bg-white"
+                  }`}
+                >
+                  {previewUrl && (
+                    <img
+                      src={previewUrl}
+                      alt="Prévisualisation"
+                      className="object-cover w-24 h-24 mb-3 rounded-full"
                     />
-                  </div>
-                </div>
-                {/* Nom */}
-                <div>
-                  <label className="block mb-2 text-sm font-medium text-gray-700">
-                    Nom *
-                  </label>
+                  )}
                   <input
-                    type="text"
-                    name="nom"
-                    value={formData.nom}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 transition-all border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Dupont"
+                    type="file"
+                    accept="image/*"
+                    ref={fileInputRef}
+                    className="hidden"
+                    onChange={(e) => handleFileSelect(e.target.files[0])}
                   />
-                </div>
-
-                {/* Prénoms */}
-                <div>
-                  <label className="block mb-2 text-sm font-medium text-gray-700">
-                    Prénoms *
-                  </label>
-                  <input
-                    type="text"
-                    name="prenoms"
-                    value={formData.prenoms}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 transition-all border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Jean Pierre"
-                  />
-                </div>
-
-                {/* Email */}
-                <div>
-                  <label className="block mb-2 text-sm font-medium text-gray-700">
-                    Email *
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 transition-all border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="jean.dupont@email.com"
-                  />
-                </div>
-
-                {/* Téléphone */}
-                <div>
-                  <label className="block mb-2 text-sm font-medium text-gray-700">
-                    Téléphone *
-                  </label>
-                  <input
-                    type="tel"
-                    name="telephone"
-                    value={formData.telephone}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 transition-all border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="+33 6 12 34 56 78"
-                  />
-                </div>
-
-                {/* Résidence */}
-                <div>
-                  <label className="block mb-2 text-sm font-medium text-gray-700">
-                    Résidence *
-                  </label>
-                  <input
-                    type="text"
-                    name="residence"
-                    value={formData.residence}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 transition-all border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Paris, France"
-                  />
-                </div>
-
-                {/* Domaine */}
-                <div>
-                  <label className="block mb-2 text-sm font-medium text-gray-700">
-                    Domaine de compétence *
-                  </label>
-                  <input
-                    type="text"
-                    name="domaine"
-                    value={formData.domaine}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 transition-all border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Développement Web"
-                  />
-                </div>
-
-                {/* Fonction */}
-                <div>
-                  <label className="block mb-2 text-sm font-medium text-gray-700">
-                    Fonction actuelle *
-                  </label>
-                  <input
-                    type="text"
-                    name="fonction"
-                    value={formData.fonction}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 transition-all border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Développeur Full Stack"
-                  />
-                </div>
-
-                {/* Structure */}
-                <div>
-                  <label className="block mb-2 text-sm font-medium text-gray-700">
-                    Structure *
-                  </label>
-                  <input
-                    type="text"
-                    name="structure"
-                    value={formData.structure}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 transition-all border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Tech Solutions SARL"
-                  />
-                </div>
-
-                {/* Lieu de travail */}
-                <div>
-                  <label className="block mb-2 text-sm font-medium text-gray-700">
-                    Lieu de travail *
-                  </label>
-                  <input
-                    type="text"
-                    name="lieuTravail"
-                    value={formData.lieuTravail}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 transition-all border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Paris La Défense"
-                  />
-                </div>
-
-                {/* Contact d'urgence */}
-                <div className="md:col-span-2">
-                  <label className="block mb-2 text-sm font-medium text-gray-700">
-                    Personne à contacter (urgence) *
-                  </label>
-                  <input
-                    type="text"
-                    name="contact"
-                    value={formData.contact}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 transition-all border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Marie Dupont - 06 87 65 43 21"
-                  />
-                </div>
-
-                {/* Opportunités */}
-                <div className="md:col-span-2">
-                  <label className="block mb-2 text-sm font-medium text-gray-700">
-                    Opportunités
-                  </label>
-                  <textarea
-                    name="opportunites"
-                    value={formData.opportunites}
-                    onChange={handleChange}
-                    rows={3}
-                    className="w-full px-4 py-3 transition-all border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Stages, Consultations, autres..."
-                  />
+                  <p
+                    className={`cursor-pointer text-gray-400 ${
+                      dragOver ? "text-blue-600" : ""
+                    }`}
+                  >
+                    {previewUrl
+                      ? "Changer la photo"
+                      : "Glissez-déposez ou cliquez pour choisir une photo"}
+                  </p>
                 </div>
               </div>
 
-              {/* Actions */}
+              {/* Champs texte */}
+              {[
+                "nom",
+                "prenoms",
+                "email",
+                "telephone",
+                "residence",
+                "domaine",
+                "fonction",
+                "structure",
+                "lieuTravail",
+                "contact",
+                "opportunites",
+              ].map((field) => (
+                <div key={field}>
+                  <label className="block mb-2 text-sm font-medium text-gray-700">
+                    {field}
+                  </label>
+                  {field === "opportunites" ? (
+                    <textarea
+                      name={field}
+                      value={formData[field]}
+                      onChange={handleChange}
+                      rows={3}
+                      className="w-full px-4 py-3 border rounded-lg resize-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      name={field}
+                      value={formData[field]}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    />
+                  )}
+                </div>
+              ))}
+
+              {/* Boutons */}
               <div className="flex gap-4 pt-6 mt-8 border-t border-gray-200">
                 <motion.button
                   type="button"

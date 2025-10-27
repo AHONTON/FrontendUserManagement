@@ -5,11 +5,16 @@ import UserCard from "../components/Layout/UserCard";
 import UserModal from "../components/Layout/UserModal";
 import UserDetailModal from "../components/Layout/UserDetailModal";
 import { useTheme } from "../components/contexts/ThemeContext";
-import SwalHelper from "../utils/SwalHelper"; // Import du composant centralisé pour les alerts
+import SwalHelper from "../utils/SwalHelper";
 
 export default function Dashboard() {
   const { theme, isDark } = useTheme();
   const API_URL = import.meta.env.VITE_API_URL;
+
+  const getPhotoUrl = (photo) => {
+    if (!photo) return "/professional-headshot.png"; // image par défaut si aucune photo
+    return photo.startsWith("http") ? photo : `${API_URL}/${photo}`;
+  };
 
   const [users, setUsers] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -19,38 +24,29 @@ export default function Dashboard() {
   const [currentPage, setCurrentPage] = useState(1);
   const usersPerPage = 15;
 
-  // Fonction pour charger les utilisateurs depuis l'API
+  // Charger les utilisateurs
   const fetchUsers = async () => {
     const loadingAlert = SwalHelper.loading("Chargement des utilisateurs...");
-
     try {
       const token =
         localStorage.getItem("auth_token") ||
         sessionStorage.getItem("auth_token");
 
-      if (!token) {
+      if (!token)
         throw new Error("Token non trouvé. Veuillez vous reconnecter.");
-      }
 
       const response = await fetch(`${API_URL}/user`, {
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`, // ✅ envoie le JWT ici
+          Authorization: `Bearer ${token}`,
         },
       });
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error("Accès non autorisé. Token invalide ou expiré.");
-        }
+      if (!response.ok)
         throw new Error("Erreur lors du chargement des utilisateurs.");
-      }
 
       const data = await response.json();
       setUsers(Array.isArray(data) ? data : data.data || []);
-
-      loadingAlert.close();
-      console.log("✅ Utilisateurs chargés :", data.data || []);
     } catch (error) {
       SwalHelper.error("Erreur", error.message);
     } finally {
@@ -62,31 +58,33 @@ export default function Dashboard() {
     fetchUsers();
   }, []);
 
+  // Ajouter utilisateur
   const handleAddUser = async (userData) => {
     const token =
       localStorage.getItem("auth_token") ||
       sessionStorage.getItem("auth_token");
-    if (!token) {
-      SwalHelper.error("Token non trouvé. Veuillez vous reconnecter.");
-      return;
-    }
+    if (!token)
+      return SwalHelper.error("Token manquant", "Veuillez vous reconnecter.");
 
     const loadingAlert = SwalHelper.loading("Ajout de l'utilisateur...");
     try {
       const response = await fetch(`${API_URL}/user`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(userData),
+        headers: { Authorization: `Bearer ${token}` },
+        body: userData,
       });
-      if (!response.ok) {
-        throw new Error("Erreur lors de l'ajout de l'utilisateur");
-      }
-      await fetchUsers();
+
+      const data = await response.json();
+      if (!response.ok || !data.success)
+        throw new Error(data.message || "Erreur lors de l'ajout");
+
+      // ✅ Mise à jour locale
+      setUsers((prev) => [data.user, ...prev]);
       setIsModalOpen(false);
-      SwalHelper.success("Succès", "Utilisateur ajouté avec succès");
+      SwalHelper.success(
+        "Succès",
+        data.message || "Utilisateur ajouté avec succès"
+      );
     } catch (error) {
       SwalHelper.error("Erreur", error.message);
     } finally {
@@ -94,32 +92,46 @@ export default function Dashboard() {
     }
   };
 
+  // Modifier utilisateur
   const handleEditUser = async (userData) => {
     const token =
       localStorage.getItem("auth_token") ||
       sessionStorage.getItem("auth_token");
-    if (!token) {
-      SwalHelper.error("Token non trouvé. Veuillez vous reconnecter.");
-      return;
-    }
+    if (!token)
+      return SwalHelper.error("Token manquant", "Veuillez vous reconnecter.");
+    if (!editingUser?._id && !editingUser?.id)
+      return SwalHelper.error(
+        "Erreur",
+        "Aucun utilisateur sélectionné pour la mise à jour."
+      );
 
     const loadingAlert = SwalHelper.loading("Mise à jour de l'utilisateur...");
     try {
-      const response = await fetch(`${API_URL}/user/${editingUser.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(userData),
-      });
-      if (!response.ok) {
-        throw new Error("Erreur lors de la mise à jour de l'utilisateur");
-      }
-      await fetchUsers();
+      const response = await fetch(
+        `${API_URL}/user/${editingUser._id || editingUser.id}`,
+        {
+          method: "PUT",
+          headers: { Authorization: `Bearer ${token}` },
+          body: userData,
+        }
+      );
+
+      const data = await response.json();
+      if (!response.ok || !data.success)
+        throw new Error(data.message || "Erreur lors de la mise à jour");
+
+      // ✅ Mise à jour locale
+      setUsers((prev) =>
+        prev.map((u) =>
+          u._id === (editingUser._id || editingUser.id) ? data.updatedUser : u
+        )
+      );
       setEditingUser(null);
       setIsModalOpen(false);
-      SwalHelper.success("Succès", "Utilisateur mis à jour avec succès");
+      SwalHelper.success(
+        "Succès",
+        data.message || "Utilisateur mis à jour avec succès"
+      );
     } catch (error) {
       SwalHelper.error("Erreur", error.message);
     } finally {
@@ -127,76 +139,67 @@ export default function Dashboard() {
     }
   };
 
+  // Supprimer utilisateur
   const handleDeleteUser = async (userId) => {
     const confirmResult = await SwalHelper.confirm(
       "Êtes-vous sûr ?",
       "Cette action supprimera l'utilisateur de manière irréversible.",
       "Oui, supprimer"
     );
-    if (confirmResult.isConfirmed) {
-      const loadingAlert = SwalHelper.loading(
-        "Suppression de l'utilisateur..."
+    if (!confirmResult.isConfirmed) return;
+
+    const loadingAlert = SwalHelper.loading("Suppression de l'utilisateur...");
+    try {
+      const token =
+        localStorage.getItem("auth_token") ||
+        sessionStorage.getItem("auth_token");
+      if (!token)
+        return SwalHelper.error("Token manquant", "Veuillez vous reconnecter.");
+
+      const response = await fetch(`${API_URL}/user/${userId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success)
+        throw new Error(data.message || "Erreur lors de la suppression");
+
+      setUsers((prev) => prev.filter((u) => u._id !== userId));
+      SwalHelper.success(
+        "Succès",
+        data.message || "Utilisateur supprimé avec succès"
       );
-      try {
-        const token =
-          localStorage.getItem("auth_token") ||
-          sessionStorage.getItem("auth_token");
-        if (!token) {
-          SwalHelper.error("Token non trouvé. Veuillez vous reconnecter.");
-          return;
-        }
-
-        const response = await fetch(`${API_URL}/user/${userId}`, {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error("Erreur lors de la suppression de l'utilisateur");
-        }
-        await fetchUsers(); // Recharger la liste après suppression
-        const remainingUsers = users.filter((user) => user.id !== userId);
-        const newTotalPages = Math.ceil(remainingUsers.length / usersPerPage);
-        if (currentPage > newTotalPages && newTotalPages > 0) {
-          setCurrentPage(newTotalPages);
-        }
-        SwalHelper.success("Succès", "Utilisateur supprimé avec succès");
-      } catch (error) {
-        SwalHelper.error("Erreur", error.message);
-      } finally {
-        loadingAlert.close();
-      }
+    } catch (error) {
+      SwalHelper.error("Erreur", error.message);
+    } finally {
+      loadingAlert.close();
     }
   };
 
+  // Voir détails utilisateur
   const handleViewDetails = async (user) => {
     const loadingAlert = SwalHelper.loading("Chargement des détails...");
     try {
       const token =
         localStorage.getItem("auth_token") ||
         sessionStorage.getItem("auth_token");
-      if (!token) {
-        SwalHelper.error("Token non trouvé. Veuillez vous reconnecter.");
-        return;
-      }
+      if (!token)
+        return SwalHelper.error("Token non trouvé. Veuillez vous reconnecter.");
 
-      const response = await fetch(`${API_URL}/user/${user.id}`, {
+      const response = await fetch(`${API_URL}/user/${user._id}`, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
       });
 
-      if (!response.ok) {
+      if (!response.ok)
         throw new Error("Erreur lors du chargement des détails");
-      }
       const data = await response.json();
-      setSelectedUser(data);
+
+      // ✅ Correction : passer le bon objet
+      setSelectedUser(data.user || data);
       setIsDetailModalOpen(true);
-      SwalHelper.success("Détails chargés avec succès");
     } catch (error) {
       SwalHelper.error("Erreur", error.message);
     } finally {
@@ -213,10 +216,7 @@ export default function Dashboard() {
   const indexOfFirstUser = indexOfLastUser - usersPerPage;
   const currentUsers = users.slice(indexOfFirstUser, indexOfLastUser);
   const totalPages = Math.ceil(users.length / usersPerPage);
-
-  const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
-  };
+  const handlePageChange = (pageNumber) => setCurrentPage(pageNumber);
 
   return (
     <div
@@ -272,8 +272,7 @@ export default function Dashboard() {
                 onClick={() => setIsModalOpen(true)}
                 className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5"
               >
-                <Plus className="w-5 h-5" />
-                Ajouter un utilisateur
+                <Plus className="w-5 h-5" /> Ajouter un utilisateur
               </motion.button>
             </div>
           </div>
@@ -301,8 +300,8 @@ export default function Dashboard() {
                 <AnimatePresence>
                   {currentUsers.map((user, index) => (
                     <UserCard
-                      key={user._id || user.id || `temp-${index}`}
-                      user={user}
+                      key={user._id || `temp-${index}`}
+                      user={{ ...user, photo: getPhotoUrl(user.photo) }}
                       index={index}
                       onView={() => handleViewDetails(user)}
                       onEdit={() => openEditModal(user)}
@@ -352,7 +351,6 @@ export default function Dashboard() {
                 >
                   Précédent
                 </PaginationButton>
-
                 <div className="flex gap-1">
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map(
                     (pageNumber) => (
@@ -372,7 +370,6 @@ export default function Dashboard() {
                     )
                   )}
                 </div>
-
                 <PaginationButton
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
@@ -386,7 +383,6 @@ export default function Dashboard() {
           </motion.nav>
         )}
 
-        {/* Empty state for no users */}
         {users.length === 0 && (
           <EmptyState isDark={isDark} onAddUser={() => setIsModalOpen(true)} />
         )}
@@ -402,17 +398,20 @@ export default function Dashboard() {
         onSubmit={editingUser ? handleEditUser : handleAddUser}
         editingUser={editingUser}
       />
-
       <UserDetailModal
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
-        user={selectedUser}
+        user={
+          selectedUser
+            ? { ...selectedUser, photo: getPhotoUrl(selectedUser.photo) }
+            : null
+        }
       />
     </div>
   );
 }
 
-// Composant EmptyState séparé pour une meilleure organisation
+// Empty state
 const EmptyState = ({ isDark, onAddUser }) => (
   <motion.div
     initial={{ opacity: 0, scale: 0.9 }}
@@ -461,7 +460,7 @@ const EmptyState = ({ isDark, onAddUser }) => (
   </motion.div>
 );
 
-// Composant PaginationButton séparé
+// Pagination button
 const PaginationButton = ({
   onClick,
   disabled,
